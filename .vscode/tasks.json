@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Deploy Firestore Rules",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"firebase deploy --only firestore:rules --project sign-language-app-5e3d6"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Deploy Firestore Rules (cmd)",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"firebase deploy --only firestore:rules --project sign-language-app-5e3d6"
+			],
+			"group": "build"
+		}
+	]
+}
