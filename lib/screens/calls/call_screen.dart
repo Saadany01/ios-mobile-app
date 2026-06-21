@@ -64,6 +64,7 @@ class _CallScreenState extends State<CallScreen> {
   AslService _aslService = AslService();
   bool _aslEnabled = false;
   bool _aslBusy = false;
+  bool _aslServerOk = true; // false when last request failed
 
   // current frame result
   String? _aslLetter;
@@ -839,6 +840,7 @@ class _CallScreenState extends State<CallScreen> {
   void _sendAslUpdate() {
     final ch = _aslDataChannel;
     if (ch == null) return;
+    if (ch.state != RTCDataChannelState.RTCDataChannelOpen) return;
     final payload = '{"t":${_encodeJson(_aslText)},"w":${_encodeJson(_aslWord)}}';
     try { ch.send(RTCDataChannelMessage(payload)); } catch (_) {}
   }
@@ -862,9 +864,18 @@ class _CallScreenState extends State<CallScreen> {
         _aslLetterJustAdded = false;
         _aslSameCount = 0;
         _aslNoHandCount = 0;
+        _aslServerOk = true;
       });
       _landmarkBuffer.clear();
       _landmarkMissCount = 0;
+      // Ping server immediately so user knows if it's unreachable
+      _aslService.isReachable().then((ok) {
+        if (!mounted || !_aslEnabled) return;
+        if (!ok) {
+          setState(() => _aslServerOk = false);
+          _showMessage('ASL server unreachable — check Settings → ASL Server URL');
+        }
+      });
       _aslTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) {
         _runAslCapture();
       });
@@ -890,10 +901,12 @@ class _CallScreenState extends State<CallScreen> {
     _aslBusy = true;
     try {
       final frameBuffer = await tracks.first.captureFrame();
-      final prediction = await _aslService.predictFromBytes(
-        frameBuffer.asUint8List(),
-      );
+      final bytes = frameBuffer.asUint8List();
+      // Skip empty frames (e.g. emulator with no camera)
+      if (bytes.isEmpty) return;
+      final prediction = await _aslService.predictFromBytes(bytes);
       if (!mounted || !_aslEnabled) return;
+      if (!_aslServerOk) setState(() => _aslServerOk = true);
 
       // ── No hand in frame ─────────────────────────────────────────────
       if (!prediction.handDetected) {
@@ -937,7 +950,7 @@ class _CallScreenState extends State<CallScreen> {
           if (_landmarkBuffer.length >= 15 && !_wordBusy) {
             // Pad short sequence by repeating last frame
             final padded = List<List<List<double>>>.from(_landmarkBuffer);
-            while (padded.length < 30) padded.add(padded.last);
+            while (padded.length < 30) { padded.add(padded.last); }
             _landmarkBuffer.clear();
             _runWordPrediction(padded);
           } else {
@@ -974,7 +987,10 @@ class _CallScreenState extends State<CallScreen> {
         _aslLetterJustAdded = false;
       }
     } catch (e) {
-      if (mounted) _showMessage('ASL error: $e');
+      if (mounted) {
+        setState(() => _aslServerOk = false);
+        _showMessage('ASL error: $e', durationSeconds: 6);
+      }
     } finally {
       _aslBusy = false;
     }
@@ -996,11 +1012,15 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {int durationSeconds = 3}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(seconds: durationSeconds),
+        backgroundColor: durationSeconds > 3 ? Colors.red[800] : null,
+      ),
+    );
   }
 
   // ── UI ───────────────────────────────────────────────────────────────
@@ -1104,28 +1124,37 @@ class _CallScreenState extends State<CallScreen> {
 
   // Subtle indicator shown when ASL is active but no hand is in frame yet
   Widget _buildAslScanningBubble() {
+    final hasError = !_aslServerOk;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
+        color: Colors.black.withOpacity(0.55),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white24, width: 1),
+        border: Border.all(
+          color: hasError ? Colors.red : Colors.white24,
+          width: hasError ? 1.5 : 1,
+        ),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: Color(0xFF25D366),
-            ),
-          ),
-          SizedBox(width: 6),
+          hasError
+              ? const Icon(Icons.wifi_off, color: Colors.red, size: 13)
+              : const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: Color(0xFF25D366),
+                  ),
+                ),
+          const SizedBox(width: 6),
           Text(
-            'Scanning…',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            hasError ? 'Server error' : 'Scanning…',
+            style: TextStyle(
+              color: hasError ? Colors.red[300] : Colors.white54,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
