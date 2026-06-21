@@ -55,6 +55,8 @@
 	<string>This app uses your camera to place video calls.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app uses your microphone to place audio calls.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app accesses your photo library to update your profile picture.</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>

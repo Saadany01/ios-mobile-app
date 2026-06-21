@@ -130,7 +130,7 @@ class _SplashGateState extends State<_SplashGate> {
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       final serverVersion = data['version'] as String? ?? '';
       final apkUrl = data['apk_url'] as String? ?? '';
-      if (serverVersion != kAppVersion && apkUrl.isNotEmpty && mounted) {
+      if (serverVersion != kAppVersion && apkUrl.isNotEmpty && mounted && Platform.isAndroid) {
         _showUpdateDialog(serverVersion, apkUrl);
       }
     } catch (_) {}
