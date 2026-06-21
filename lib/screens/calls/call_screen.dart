@@ -242,9 +242,11 @@ class _CallScreenState extends State<CallScreen> {
 
     final turnService = context.read<TurnService>();
 
-    // Default STUN-only config; TURN is added below if available.
+    // Default STUN config with multiple fallback servers.
     final iceServers = <Map<String, dynamic>>[
       {'urls': 'stun:stun.l.google.com:19302'},
+      {'urls': 'stun:stun1.l.google.com:19302'},
+      {'urls': 'stun:stun2.l.google.com:19302'},
     ];
 
     final turnResult = await turnService.fetchIceServers();
@@ -259,7 +261,12 @@ class _CallScreenState extends State<CallScreen> {
       }
     }
 
-    final configuration = <String, dynamic>{'iceServers': iceServers};
+    final configuration = <String, dynamic>{
+      'iceServers': iceServers,
+      'sdpSemantics': 'unified-plan',
+      'bundlePolicy': 'max-bundle',
+      'rtcpMuxPolicy': 'require',
+    };
 
     final peerConnection = await createPeerConnection(configuration);
 
@@ -267,9 +274,9 @@ class _CallScreenState extends State<CallScreen> {
       'audio': true,
       'video': widget.isVideoCall
           ? {
-              'width': {'ideal': 1280, 'min': 640},
-              'height': {'ideal': 720, 'min': 480},
-              'frameRate': {'ideal': 30},
+              'width': {'ideal': 640, 'max': 640},
+              'height': {'ideal': 480, 'max': 480},
+              'frameRate': {'ideal': 24, 'max': 30},
               'facingMode': 'user',
             }
           : false,
