@@ -45,6 +45,10 @@ void main() async {
 
   await LocalNotificationsService.instance.initialize();
 
+  // Pre-warm the ASL server URL from Gist so it's ready before any call opens.
+  // Runs in background — does not block app startup.
+  ServerConfig.getUrl().catchError((_) => '');
+
   runApp(const MyApp());
 }
 

@@ -65,6 +65,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _aslEnabled = false;
   bool _aslBusy = false;
   bool _aslServerOk = true; // false when last request failed
+  bool _aslUrlReady = false; // true once server URL is loaded
 
   // current frame result
   String? _aslLetter;
@@ -112,7 +113,12 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _loadServerUrl() async {
     final url = await ServerConfig.getUrl();
-    if (mounted) setState(() => _aslService = AslService(serverUrl: url));
+    if (mounted) {
+      setState(() {
+        _aslService = AslService(serverUrl: url);
+        _aslUrlReady = true;
+      });
+    }
   }
 
   Future<void> _initRenderers() async {
@@ -848,6 +854,10 @@ class _CallScreenState extends State<CallScreen> {
   String _encodeJson(String? s) => s == null ? 'null' : '"${s.replaceAll('"', '\\"')}"';
 
   void _toggleAsl() {
+    if (!_aslUrlReady) {
+      _showMessage('Loading server URL…');
+      return;
+    }
     if (_aslEnabled) {
       _aslTimer?.cancel();
       _aslTimer = null;
