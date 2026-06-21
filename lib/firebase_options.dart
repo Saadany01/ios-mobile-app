@@ -45,6 +45,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '651084462072',
     projectId: 'sign-language-app-5e3d6',
     storageBucket: 'sign-language-app-5e3d6.firebasestorage.app',
-    iosBundleId: 'com.example.signLanguageApp',
+    iosBundleId: 'com.hearmysign.app',
   );
 }
