@@ -213,16 +213,41 @@ new_asl_tensorflow_project/             AI training + server
 
 ## Getting Started
 
+Everything is included — no extra config files needed. Just clone and run.
+
+### Prerequisites
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.x)
+- Android Studio + Android SDK (for Android), or Xcode 15+ (for iOS)
+- A physical device or emulator
+
+### Run on Android
+
 ```bash
 git clone https://github.com/ZyadMohamedVa/sign-lang-app.git
 cd sign-lang-app
 git checkout asl-public-api
 cd sign_language_app
 flutter pub get
-flutter run
+flutter run                          # runs on connected device / emulator
 ```
 
-> You need `google-services.json` in `android/app/` — get it from Firebase console (not committed to repo).
+### Build release APK
+
+```bash
+flutter build apk --release
+# output: build/app/outputs/flutter-apk/app-release.apk
+```
+
+### Run on iOS (Mac + Xcode required)
+
+```bash
+flutter pub get
+open ios/Runner.xcworkspace          # set your Team in Signing & Capabilities
+flutter run                          # or build from Xcode
+```
+
+> **Firebase & API keys are already included** in the repo (`google-services.json`, `firebase_options.dart`).  
+> The ASL server URL is fetched automatically from a GitHub Gist on first launch — no manual setup needed.
 
 ### Running the AI Server
 
