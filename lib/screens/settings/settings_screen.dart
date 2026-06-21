@@ -7,6 +7,7 @@ import '../../core/l10n/app_strings.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/chat_service.dart';
+import '../../services/server_config.dart';
 import '../shared/user_profile_avatar.dart';
 import 'profile_information_screen.dart';
 
@@ -257,6 +258,14 @@ class _SettingsView extends StatelessWidget {
             title: s.accessibility,
             subtitle: s.configure,
             onTap: () => _showAccessibilityDialog(context, themeProvider),
+          ),
+
+          _buildSettingTile(
+            context,
+            icon: Icons.dns_outlined,
+            title: s.aslServer,
+            subtitle: s.serverUrl,
+            onTap: () => _showServerUrlDialog(context),
           ),
 
           const SizedBox(height: 24),
@@ -935,6 +944,66 @@ class _SettingsView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showServerUrlDialog(BuildContext context) async {
+    final current = await ServerConfig.getUrl();
+    if (!context.mounted) return;
+    final controller = TextEditingController(text: current);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.dns_outlined),
+          SizedBox(width: 8),
+          Text('ASL Server URL'),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the URL of your ASL recognition server.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Server URL',
+                hintText: 'http://asl.servepics.com:8000',
+                prefixIcon: Icon(Icons.link),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await ServerConfig.setUrl(result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Server URL saved.'),
+            backgroundColor: Color(0xFF25D366),
+          ),
+        );
+      }
+    }
   }
 
   void _showTrustedDevicesDialog(

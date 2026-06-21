@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-const kAslServerDefaultUrl = 'https://placeholder.trycloudflare.com';
+const kAslServerDefaultUrl = 'http://asl.servepics.com:8000';
 
 class AslPrediction {
   final String predictedClass;
