@@ -94,6 +94,7 @@ class AppStrings {
   String get privacyPolicy      => _t('Privacy Policy', 'Política de privacidad', 'Politique de confidentialité', 'سياسة الخصوصية');
   String get authenticatorApp   => _t('Authenticator App', 'App autenticador', 'App authentificateur', 'تطبيق المصادقة');
   String get trustedDevices     => _t('Trusted Devices', 'Dispositivos de confianza', 'Appareils de confiance', 'الأجهزة الموثوقة');
+  String get thisDeviceActive   => _t('This device • Active now', 'Este dispositivo • Activo', 'Cet appareil • Actif', 'هذا الجهاز • نشط الآن');
   String get checkingStatus     => _t('Checking status...', 'Verificando estado...', 'Vérification...', 'جارٍ التحقق من الحالة...');
   String get onForLogin         => _t('On for login', 'Activado', 'Activé', 'مفعّل لتسجيل الدخول');
   String get offForLoginSaved   => _t('Off for login (configuration saved)', 'Desactivado (guardado)', 'Désactivé (sauvegardé)', 'معطّل (الإعدادات محفوظة)');

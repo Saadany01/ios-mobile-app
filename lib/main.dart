@@ -85,6 +85,12 @@ class _AppView extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(themeProvider.textScale),
+            ),
+            child: child!,
+          ),
           locale: themeProvider.locale,
           supportedLocales: const [
             Locale('en'),

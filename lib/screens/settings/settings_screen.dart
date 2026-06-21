@@ -192,12 +192,8 @@ class _SettingsView extends StatelessWidget {
             context,
             icon: Icons.devices_outlined,
             title: s.trustedDevices,
-            subtitle: '3 devices',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.deviceManagementComingSoon)),
-              );
-            },
+            subtitle: s.thisDeviceActive,
+            onTap: () => _showTrustedDevicesDialog(context, settingsController),
           ),
 
           const SizedBox(height: 24),
@@ -260,11 +256,7 @@ class _SettingsView extends StatelessWidget {
             icon: Icons.accessibility_outlined,
             title: s.accessibility,
             subtitle: s.configure,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.accessibilityComingSoon)),
-              );
-            },
+            onTap: () => _showAccessibilityDialog(context, themeProvider),
           ),
 
           const SizedBox(height: 24),
@@ -284,21 +276,13 @@ class _SettingsView extends StatelessWidget {
             context,
             icon: Icons.help_outline,
             title: s.helpSupport,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.helpCenterComingSoon)),
-              );
-            },
+            onTap: () => _showHelpSupportDialog(context),
           ),
           _buildSettingTile(
             context,
             icon: Icons.privacy_tip_outlined,
             title: s.privacyPolicy,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.openingPrivacyPolicy)),
-              );
-            },
+            onTap: () => _showPrivacyPolicyDialog(context),
           ),
 
           const SizedBox(height: 24),
@@ -485,6 +469,7 @@ class _SettingsView extends StatelessWidget {
   }
 
   String _presenceLabel(String status, AppStrings s) {
+
     switch (_normalizePresence(status)) {
       case 'idle':
         return s.presenceIdle;
@@ -952,6 +937,273 @@ class _SettingsView extends StatelessWidget {
     );
   }
 
+  void _showTrustedDevicesDialog(
+    BuildContext context,
+    SettingsController controller,
+  ) {
+    final user = controller.currentUser;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.devices_outlined),
+          SizedBox(width: 8),
+          Text('Trusted Devices'),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(Icons.smartphone, color: Colors.green),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'This Device',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          user?.email ?? user?.phoneNumber ?? 'Current session',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const Text(
+                          'Active now',
+                          style: TextStyle(fontSize: 12, color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'To remove access from other devices, sign out and change your password.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              if (!context.mounted) return;
+              final confirm = await _showLogoutDialog(context);
+              if (confirm == true && context.mounted) {
+                await controller.signOut();
+              }
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAccessibilityDialog(BuildContext context, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(children: [
+            Icon(Icons.accessibility_outlined),
+            SizedBox(width: 8),
+            Text('Accessibility'),
+          ]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Text Size',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              ...[
+                ('Small', 0.85),
+                ('Normal', 1.0),
+                ('Large', 1.2),
+                ('Extra Large', 1.4),
+              ].map((entry) {
+                final (label, scale) = entry;
+                return RadioListTile<double>(
+                  dense: true,
+                  title: Text(label),
+                  value: scale,
+                  groupValue: themeProvider.textScale,
+                  activeColor: const Color(0xFF25D366),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    await themeProvider.setTextScale(value);
+                    setDialogState(() {});
+                  },
+                );
+              }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHelpSupportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.help_outline),
+          SizedBox(width: 8),
+          Text('Help & Support'),
+        ]),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Contact Us',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                const Icon(Icons.email_outlined, size: 16, color: Color(0xFF25D366)),
+                const SizedBox(width: 8),
+                SelectableText(
+                  'support@hearmysign.app',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ]),
+              const SizedBox(height: 20),
+              const Text(
+                'Frequently Asked Questions',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              const _FaqItem(
+                question: 'How do I make a video call?',
+                answer: 'Go to Contacts, tap a contact, then tap the video camera icon.',
+              ),
+              const _FaqItem(
+                question: 'How does ASL recognition work?',
+                answer: 'During a call, tap the hand icon to enable real-time sign language recognition.',
+              ),
+              const _FaqItem(
+                question: 'How do I add friends?',
+                answer: 'Go to Messages, tap the person+ icon, and search by username.',
+              ),
+              const _FaqItem(
+                question: 'Why is my video call dropping?',
+                answer: 'Check your internet connection. Video calls require a stable connection.',
+              ),
+              const _FaqItem(
+                question: 'How do I change my profile picture?',
+                answer: 'Go to Settings → Profile Information → tap your avatar.',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.privacy_tip_outlined),
+          SizedBox(width: 8),
+          Text('Privacy Policy'),
+        ]),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Last updated: January 2025',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                SizedBox(height: 16),
+                _PolicySection(
+                  title: '1. Information We Collect',
+                  body:
+                      'We collect information you provide directly to us, including your name, email address, phone number, and profile picture. We also collect call and message metadata to provide our services.',
+                ),
+                _PolicySection(
+                  title: '2. How We Use Your Information',
+                  body:
+                      'We use the information we collect to provide, maintain, and improve our services, facilitate video and audio calls, deliver messages, and send service-related notifications.',
+                ),
+                _PolicySection(
+                  title: '3. Data Storage',
+                  body:
+                      'Your data is stored securely using Firebase (Google Cloud). Call data is stored temporarily and may be deleted after 90 days. Messages are stored until you delete them.',
+                ),
+                _PolicySection(
+                  title: '4. Sharing of Information',
+                  body:
+                      'We do not sell your personal information. We share data only with service providers who assist in operating our platform (Firebase, Cloudinary) and as required by law.',
+                ),
+                _PolicySection(
+                  title: '5. Security',
+                  body:
+                      'We implement industry-standard security measures including encrypted data transmission (TLS), two-factor authentication, and secure password storage.',
+                ),
+                _PolicySection(
+                  title: '6. Your Rights',
+                  body:
+                      'You may request access to, correction of, or deletion of your personal data at any time through the app settings or by contacting support@hearmysign.app.',
+                ),
+                _PolicySection(
+                  title: '7. Contact Us',
+                  body:
+                      'For questions about this Privacy Policy, contact us at support@hearmysign.app.',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAboutDialog(BuildContext context) {
     final s = AppStrings.of(context);
     showDialog(
@@ -982,6 +1234,75 @@ class _SettingsView extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             child: Text(s.close),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FaqItem extends StatefulWidget {
+  const _FaqItem({required this.question, required this.answer});
+  final String question;
+  final String answer;
+
+  @override
+  State<_FaqItem> createState() => _FaqItemState();
+}
+
+class _FaqItemState extends State<_FaqItem> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.question,
+                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                  ),
+                ),
+                Icon(_expanded ? Icons.expand_less : Icons.expand_more, size: 18),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              widget.answer,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ),
+        const Divider(height: 1),
+      ],
+    );
+  }
+}
+
+class _PolicySection extends StatelessWidget {
+  const _PolicySection({required this.title, required this.body});
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 4),
+          Text(body, style: const TextStyle(fontSize: 13, color: Colors.grey)),
         ],
       ),
     );
