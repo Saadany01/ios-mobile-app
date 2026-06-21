@@ -5,17 +5,12 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.hearmysign.app
     scripts:
       - name: Disable Swift Package Manager
         script: flutter config --no-enable-swift-package-manager
       - name: Get Flutter packages
         script: flutter pub get
-      - name: Build iOS IPA
-        script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
+      - name: Build iOS (no code signing)
+        script: flutter build ios --release --no-codesign
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/Runner.app
