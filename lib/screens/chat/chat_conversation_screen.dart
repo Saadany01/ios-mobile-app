@@ -81,6 +81,7 @@ class _ChatConversationViewState extends State<_ChatConversationView>
       backgroundColor: const Color(0xFF031A1F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF042A2B),
+        foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 8,
@@ -104,10 +105,15 @@ class _ChatConversationViewState extends State<_ChatConversationView>
                       widget.friendship.friendDisplayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       '@${widget.friendship.friendUsername}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -333,7 +339,7 @@ class _ChatConversationViewState extends State<_ChatConversationView>
                                     filled: true,
                                     fillColor: Colors.transparent,
                                     hintText: 'Write a message...',
-                                    hintStyle: TextStyle(color: Colors.white60),
+                                    hintStyle: TextStyle(color: Colors.white70),
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
