@@ -16,6 +16,11 @@ class LocalNotificationsService {
   static const String _directMessagesChannelDescription =
       'Incoming direct message alerts';
 
+  static const String _incomingCallsChannelId = 'incoming_calls';
+  static const String _incomingCallsChannelName = 'Incoming Calls';
+  static const String _incomingCallsChannelDescription =
+      'Incoming call alerts';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   final StreamController<String> _tapPayloadController =
@@ -67,6 +72,15 @@ class LocalNotificationsService {
         _directMessagesChannelName,
         description: _directMessagesChannelDescription,
         importance: Importance.high,
+      ),
+    );
+
+    await androidImplementation?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _incomingCallsChannelId,
+        _incomingCallsChannelName,
+        description: _incomingCallsChannelDescription,
+        importance: Importance.max,
       ),
     );
 
