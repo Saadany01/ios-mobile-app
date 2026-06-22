@@ -189,6 +189,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                             );
                           }
 
+                          final maxBubbleWidth =
+                              MediaQuery.of(context).size.width * 0.72;
                           return ListView.builder(
                             key: PageStorageKey<String>(
                               'chat_${widget.friendship.chatId}',
@@ -212,50 +214,68 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                                   !isMine &&
                                   (nextMessage == null ||
                                       nextMessage.senderId != message.senderId);
+                              final prevMessage =
+                                  index > 0 ? messages[index - 1] : null;
+                              final showDateSep = prevMessage == null ||
+                                  !_isSameDay(
+                                    prevMessage.createdAt,
+                                    message.createdAt,
+                                  );
 
-                              return Align(
-                                alignment: isMine
-                                    ? Alignment.centerRight
-                                    : Alignment.centerLeft,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 5,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: isMine
-                                        ? MainAxisAlignment.end
-                                        : MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      if (!isMine)
-                                        showPeerAvatar
-                                            ? _Avatar(
-                                                name: message.senderDisplayName,
-                                                photoUrl:
-                                                    message.senderPhotoUrl,
-                                                radius: 14,
-                                                onTap: () =>
-                                                    _showFriendProfileSheet(
-                                                      context,
-                                                    ),
-                                              )
-                                            : const SizedBox(
-                                                width: 28,
-                                                height: 28,
-                                              ),
-                                      if (!isMine) const SizedBox(width: 8),
-                                      Flexible(
-                                        child: _MessageBubble(
-                                          message: message,
-                                          isMine: isMine,
-                                          friendLastSeenAt: widget
-                                              .friendship
-                                              .friendLastSeenAt,
-                                        ),
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (showDateSep)
+                                    _DateSeparator(date: message.createdAt),
+                                  Align(
+                                    alignment: isMine
+                                        ? Alignment.centerRight
+                                        : Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 3,
                                       ),
-                                    ],
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          if (!isMine)
+                                            showPeerAvatar
+                                                ? _Avatar(
+                                                    name: message
+                                                        .senderDisplayName,
+                                                    photoUrl:
+                                                        message.senderPhotoUrl,
+                                                    radius: 14,
+                                                    onTap: () =>
+                                                        _showFriendProfileSheet(
+                                                          context,
+                                                        ),
+                                                  )
+                                                : const SizedBox(
+                                                    width: 28,
+                                                    height: 28,
+                                                  ),
+                                          if (!isMine)
+                                            const SizedBox(width: 8),
+                                          ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              maxWidth: maxBubbleWidth,
+                                            ),
+                                            child: _MessageBubble(
+                                              message: message,
+                                              isMine: isMine,
+                                              friendLastSeenAt: widget
+                                                  .friendship
+                                                  .friendLastSeenAt,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               );
                             },
                           );
@@ -775,6 +795,9 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     Navigator.of(context).pop();
   }
 
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   String _presenceLabel(String status) {
     switch (status.trim().toLowerCase()) {
       case 'online':
@@ -934,5 +957,45 @@ class _Avatar extends StatelessWidget {
     if (safe.isEmpty) return 'U';
     if (safe.length == 1) return safe.toUpperCase();
     return safe.substring(0, 2).toUpperCase();
+  }
+}
+
+class _DateSeparator extends StatelessWidget {
+  const _DateSeparator({required this.date});
+  final DateTime date;
+
+  String _label() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(d).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    return DateFormat('MMMM d, y').format(date);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: Colors.white12)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              _label(),
+              style: const TextStyle(
+                color: Colors.white38,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: Colors.white12)),
+        ],
+      ),
+    );
   }
 }
