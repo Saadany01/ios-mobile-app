@@ -242,21 +242,15 @@ class _CallScreenState extends State<CallScreen> {
 
     final turnService = context.read<TurnService>();
 
-    // Default STUN config with multiple fallback servers.
-    final iceServers = <Map<String, dynamic>>[
-      {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 'stun:stun1.l.google.com:19302'},
-      {'urls': 'stun:stun2.l.google.com:19302'},
-    ];
-
+    // Fetch ICE servers with TURN — falls back to local HMAC computation
+    // if port 8000 is blocked on 4G, so calls always have a TURN relay.
     final turnResult = await turnService.fetchIceServers();
-    if (turnResult != null) {
-      final servers = turnResult['iceServers'];
-      if (servers is List) {
-        for (final server in servers) {
-          if (server is Map<String, dynamic>) {
-            iceServers.add(server);
-          }
+    final iceServers = <Map<String, dynamic>>[];
+    final servers = turnResult['iceServers'];
+    if (servers is List) {
+      for (final server in servers) {
+        if (server is Map<String, dynamic>) {
+          iceServers.add(server);
         }
       }
     }
@@ -332,7 +326,9 @@ class _CallScreenState extends State<CallScreen> {
       if (!mounted) return;
 
       if (event.track.kind == 'video') {
-        _remoteRenderer.srcObject = event.streams.first;
+        setState(() {
+          _remoteRenderer.srcObject = event.streams.first;
+        });
       }
     };
 
@@ -340,7 +336,9 @@ class _CallScreenState extends State<CallScreen> {
         (MediaStream stream, MediaStreamTrack track) {
           if (!mounted) return;
           if (track.kind == 'video') {
-            _remoteRenderer.srcObject = null;
+            setState(() {
+              _remoteRenderer.srcObject = null;
+            });
           }
         };
 
