@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -15,6 +17,7 @@ import 'core/theme/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/login_two_factor_screen.dart';
 import 'screens/auth/mandatory_password_change_screen.dart';
+import 'screens/calls/call_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
@@ -24,6 +27,19 @@ import 'services/contacts_service.dart';
 import 'services/local_notifications_service.dart';
 import 'services/server_config.dart';
 import 'services/turn_service.dart';
+
+// Top-level FCM background handler — runs in a separate isolate when
+// the app is killed. Firebase must be re-initialized here.
+@pragma('vm:entry-point')
+Future<void> _onFcmBackgroundMessage(RemoteMessage message) async {
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+  // OS already shows the notification from the FCM payload; nothing extra
+  // needed here unless we want silent data-only processing.
+}
 
 const String kAppVersion = '1.1.0';
 
@@ -44,6 +60,9 @@ void main() async {
   }
 
   await LocalNotificationsService.instance.initialize();
+
+  // Register FCM background handler before runApp.
+  FirebaseMessaging.onBackgroundMessage(_onFcmBackgroundMessage);
 
   // Pre-warm the ASL server URL from Gist so it's ready before any call opens.
   // Runs in background — does not block app startup.
@@ -226,11 +245,87 @@ class _AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<_AuthGate> {
   late final Stream<User?> _authChanges;
+  String? _fcmRegisteredUid;
 
   @override
   void initState() {
     super.initState();
     _authChanges = context.read<AuthService>().authStateChanges();
+    _setupFcmListeners();
+  }
+
+  void _setupFcmListeners() {
+    // Foreground messages: show a local notification
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final data = message.data;
+      if (data['type'] == 'direct_message') {
+        final chatId = (data['chatId'] ?? '').toString();
+        final senderName = (data['senderName'] ?? '').toString();
+        final body = message.notification?.body ?? '';
+        if (chatId.isNotEmpty) {
+          LocalNotificationsService.instance.showIncomingMessageNotification(
+            chatId: chatId,
+            senderName: senderName,
+            messagePreview: body,
+          );
+        }
+      }
+    });
+
+    // App was in background and user tapped the notification
+    FirebaseMessaging.onMessageOpenedApp.listen(_navigateFromMessage);
+
+    // App was terminated and user tapped the notification
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) _navigateFromMessage(message);
+    });
+  }
+
+  void _navigateFromMessage(RemoteMessage message) {
+    final data = message.data;
+    final type = (data['type'] ?? '').toString();
+    if (type == 'incoming_call') {
+      final callId = (data['callId'] ?? '').toString();
+      final mediaType = (data['mediaType'] ?? 'audio').toString();
+      if (callId.isNotEmpty) {
+        MyApp.navigatorKey.currentState?.push(MaterialPageRoute(
+          builder: (_) => CallScreen(callId: callId, isCaller: false, mediaType: mediaType),
+        ));
+      }
+    }
+  }
+
+  Future<void> _registerFcmToken(String uid) async {
+    if (_fcmRegisteredUid == uid) return;
+    _fcmRegisteredUid = uid;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+      final token = await messaging.getToken();
+      if (token != null) {
+        await _saveDeviceSession(uid, token);
+      }
+      messaging.onTokenRefresh.listen((newToken) {
+        _saveDeviceSession(uid, newToken).catchError((_) {});
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _saveDeviceSession(String uid, String token) async {
+    final platform = Platform.isIOS ? 'iOS' : Platform.isAndroid ? 'Android' : 'Device';
+    final osVersion = Platform.operatingSystemVersion;
+    final deviceName = Platform.isIOS
+        ? 'iPhone ($osVersion)'
+        : Platform.isAndroid
+        ? 'Android Phone ($osVersion)'
+        : platform;
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'fcmToken': token,
+      'deviceName': deviceName,
+      'devicePlatform': platform,
+      'deviceLastSeen': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -262,6 +357,7 @@ class _AuthGateState extends State<_AuthGate> {
 
         if (snapshot.hasData) {
           final user = snapshot.data!;
+          _registerFcmToken(user.uid);
 
           return StreamBuilder<Map<String, dynamic>?>(
             stream: authService

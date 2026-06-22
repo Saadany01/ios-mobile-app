@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -1011,6 +1013,8 @@ class _SettingsView extends StatelessWidget {
     SettingsController controller,
   ) {
     final user = controller.currentUser;
+    if (user == null) return;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1019,49 +1023,97 @@ class _SettingsView extends StatelessWidget {
           SizedBox(width: 8),
           Text('Trusted Devices'),
         ]),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Row(
+        content: SizedBox(
+          width: double.maxFinite,
+          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final data = snapshot.data?.data() ?? {};
+              final deviceName = (data['deviceName'] ?? '').toString().trim();
+              final platform = (data['devicePlatform'] ?? '').toString().trim();
+              final rawLastSeen = data['deviceLastSeen'];
+              final lastSeen = rawLastSeen is Timestamp ? rawLastSeen.toDate() : null;
+
+              final displayName = deviceName.isNotEmpty
+                  ? deviceName
+                  : platform.isNotEmpty
+                  ? '$platform Device'
+                  : 'This Device';
+
+              String lastSeenLabel;
+              if (lastSeen == null) {
+                lastSeenLabel = 'Active now';
+              } else {
+                final diff = DateTime.now().difference(lastSeen);
+                if (diff.inMinutes < 5) {
+                  lastSeenLabel = 'Active now';
+                } else if (diff.inHours < 1) {
+                  lastSeenLabel = '${diff.inMinutes}m ago';
+                } else if (diff.inDays < 1) {
+                  lastSeenLabel = '${diff.inHours}h ago';
+                } else {
+                  lastSeenLabel = DateFormat('MMM d, HH:mm').format(lastSeen);
+                }
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.smartphone, color: Colors.green),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
                       children: [
-                        const Text(
-                          'This Device',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        Icon(
+                          platform == 'iOS'
+                              ? Icons.phone_iphone
+                              : Icons.phone_android,
+                          color: Colors.green,
                         ),
-                        Text(
-                          user?.email ?? user?.phoneNumber ?? 'Current session',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                lastSeenLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: lastSeenLabel == 'Active now'
+                                      ? Colors.green
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const Text(
-                          'Active now',
-                          style: TextStyle(fontSize: 12, color: Colors.green),
-                        ),
+                        const Icon(Icons.check_circle, color: Colors.green, size: 18),
                       ],
                     ),
                   ),
-                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Only the most recent device is tracked. Sign out and change your password to revoke access from lost devices.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'To remove access from other devices, sign out and change your password.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
+              );
+            },
+          ),
         ),
         actions: [
           TextButton(

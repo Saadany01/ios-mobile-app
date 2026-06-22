@@ -156,6 +156,75 @@ export const onCallStatusChanged = functions.firestore
   });
 
 /**
+ * Triggered when a new message is created in a direct chat.
+ * Sends an FCM push notification to the recipient so they get
+ * notified even when the app is backgrounded or killed.
+ */
+export const onMessageSent = functions.firestore
+  .document("direct_chats/{chatId}/messages/{messageId}")
+  .onCreate(async (snapshot, context) => {
+    const messageData = snapshot.data();
+    if (!messageData) return;
+
+    const chatId = context.params.chatId as string;
+    const senderId = (messageData.senderId ?? "") as string;
+    const senderName = (messageData.senderDisplayName ?? "Someone") as string;
+    const text = (messageData.text ?? "") as string;
+
+    if (!senderId) return;
+
+    // Resolve the other participant via the friendship document (same id as chatId)
+    const friendshipDoc = await db.collection("friendships").doc(chatId).get();
+    if (!friendshipDoc.exists) return;
+
+    const fd = friendshipDoc.data()!;
+    const userAId = (fd.userAId ?? "") as string;
+    const userBId = (fd.userBId ?? "") as string;
+    if (!userAId || !userBId) return;
+
+    const recipientId = senderId === userAId ? userBId : userAId;
+    if (!recipientId || recipientId === senderId) return;
+
+    const recipientDoc = await db.collection("users").doc(recipientId).get();
+    if (!recipientDoc.exists) return;
+
+    const recipientData = recipientDoc.data() as UserData;
+    if (!recipientData.fcmToken) return;
+
+    const preview = text.length > 80 ? text.substring(0, 77) + "…" : text;
+
+    try {
+      await messaging.send({
+        token: recipientData.fcmToken,
+        notification: {
+          title: senderName,
+          body: preview || "Sent you a message.",
+        },
+        data: {
+          type: "direct_message",
+          chatId,
+          senderId,
+          senderName,
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "direct_messages",
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+        },
+        apns: {
+          headers: { "apns-priority": "10" },
+          payload: { aps: { sound: "default" } },
+        },
+      });
+      functions.logger.info("Message notification sent", { chatId, recipientId });
+    } catch (err) {
+      functions.logger.error("Failed to send message notification", err);
+    }
+  });
+
+/**
  * Callable function that returns time-limited TURN credentials for our
  * self-hosted coturn server. Uses HMAC-SHA1 shared secret — no third party.
  */

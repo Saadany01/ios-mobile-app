@@ -5,6 +5,7 @@ import '../../core/l10n/app_strings.dart';
 import '../../services/auth_service.dart';
 import '../calls/calls_screen.dart';
 import '../contacts/contacts_screen.dart';
+import '../settings/settings_screen.dart';
 import '../shared/user_profile_avatar.dart';
 
 class CommunicationScreen extends StatelessWidget {
@@ -32,15 +33,20 @@ class _CommunicationView extends StatelessWidget {
         title: Text(s.communication),
         actions: [
           if (user != null)
-            UserProfileAvatar(
-              displayName: userName,
-              photoUrlStream: authService.userPhotoUrlStream(user.uid),
-              initialPhotoUrl: userPhotoUrl,
-              showPresenceIndicator: true,
-              presenceStatusStream: authService.userPresenceStatusStream(
-                user.uid,
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               ),
-              initialPresenceStatus: 'online',
+              child: UserProfileAvatar(
+                displayName: userName,
+                photoUrlStream: authService.userPhotoUrlStream(user.uid),
+                initialPhotoUrl: userPhotoUrl,
+                showPresenceIndicator: true,
+                presenceStatusStream: authService.userPresenceStatusStream(
+                  user.uid,
+                ),
+                initialPresenceStatus: 'online',
+              ),
             )
           else
             CircleAvatar(

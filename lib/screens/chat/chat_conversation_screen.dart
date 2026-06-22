@@ -36,7 +36,8 @@ class _ChatConversationView extends StatefulWidget {
   State<_ChatConversationView> createState() => _ChatConversationViewState();
 }
 
-class _ChatConversationViewState extends State<_ChatConversationView> {
+class _ChatConversationViewState extends State<_ChatConversationView>
+    with WidgetsBindingObserver {
   DateTime? _lastSeenMarkAt;
   final ScrollController _messagesScrollController = ScrollController();
   String? _lastNewestMessageId;
@@ -45,6 +46,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _markSeen();
@@ -52,7 +54,20 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
   }
 
   @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+      if (bottomInset > 100) {
+        _scrollToBottom(force: true, animated: true);
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _messagesScrollController.dispose();
     super.dispose();
   }
@@ -315,9 +330,13 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                                   onSubmitted: (_) => _send(context),
                                   style: const TextStyle(color: Colors.white),
                                   decoration: const InputDecoration(
+                                    filled: true,
+                                    fillColor: Colors.transparent,
                                     hintText: 'Write a message...',
                                     hintStyle: TextStyle(color: Colors.white60),
                                     border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
                                     contentPadding: EdgeInsets.symmetric(
                                       horizontal: 14,
                                       vertical: 10,

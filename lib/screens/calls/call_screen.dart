@@ -1291,26 +1291,45 @@ class _CallScreenState extends State<CallScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (peerPhotoUrl != null)
+        if (peerPhotoUrl != null) ...[
           Image.network(
             peerPhotoUrl,
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const SizedBox.expand(),
+            errorBuilder: (_, _, _) => _buildGradientBackground(),
           ),
-        BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(color: Colors.black.withOpacity(0.45)),
-        ),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(color: Colors.black.withOpacity(0.45)),
+          ),
+        ] else
+          _buildGradientBackground(),
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0x33000000), Color(0xB2000000)],
+              colors: [Color(0x33000000), Color(0xCC000000)],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGradientBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -0.4),
+          radius: 1.2,
+          colors: [
+            Color(0xFF0A4A52),
+            Color(0xFF042A2B),
+            Color(0xFF021318),
+          ],
+          stops: [0.0, 0.55, 1.0],
+        ),
+      ),
     );
   }
 
