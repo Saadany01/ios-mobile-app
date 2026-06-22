@@ -10,7 +10,15 @@ workflows:
         script: flutter config --no-enable-swift-package-manager
       - name: Get Flutter packages
         script: flutter pub get
-      - name: Build iOS IPA (no code signing)
+      - name: Build iOS archive (no code signing)
         script: flutter build ipa --release --no-codesign
+      - name: Package unsigned IPA
+        script: |
+          ARCHIVE=build/ios/archive/Runner.xcarchive
+          APP_PATH="$ARCHIVE/Products/Applications/Runner.app"
+          mkdir -p build/ios/ipa/Payload
+          cp -r "$APP_PATH" build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r HearMySign.ipa Payload
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/ipa/HearMySign.ipa
