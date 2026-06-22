@@ -445,18 +445,28 @@ class _ChatConversationViewState extends State<_ChatConversationView>
     return remaining <= threshold;
   }
 
-  void _scrollToBottom({bool force = false, bool animated = true}) {
+  void _scrollToBottom({bool force = false, bool animated = true, int _retries = 5}) {
     if (!_messagesScrollController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _scrollToBottom(force: force, animated: animated);
-      });
+      if (_retries > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scrollToBottom(force: force, animated: animated, _retries: _retries - 1);
+        });
+      }
       return;
     }
 
     if (!force && !_isNearBottom()) return;
 
     final target = _messagesScrollController.position.maxScrollExtent;
+    if (target <= 0 && _retries > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToBottom(force: force, animated: animated, _retries: _retries - 1);
+      });
+      return;
+    }
+
     if (animated) {
       _messagesScrollController.animateTo(
         target,
