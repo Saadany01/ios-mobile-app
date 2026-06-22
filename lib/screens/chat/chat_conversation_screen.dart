@@ -220,10 +220,7 @@ class _ChatConversationViewState extends State<_ChatConversationView>
                             addAutomaticKeepAlives: false,
                             addRepaintBoundaries: true,
                             addSemanticIndexes: false,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 16,
-                            ),
+                            padding: const EdgeInsets.fromLTRB(14, 16, 14, 80),
                             itemCount: messages.length,
                             itemBuilder: (context, index) {
                               final message = messages[index];
