@@ -240,14 +240,11 @@ class SignupController extends ChangeNotifier {
       countryDialCode: _selectedCountryDialCode,
     );
     _normalizedPhoneNumber = normalizedPhone;
-
-    // Phone SMS verification is optional. If the user verified their phone we
-    // link that credential; otherwise we still create the account and just
-    // store the phone number on the profile.
-    final verifiedCredential =
-        (_isPhoneVerified && _verifiedPhoneNumber == normalizedPhone)
-        ? _phoneCredential
-        : null;
+    if (!_isPhoneVerified ||
+        _phoneCredential == null ||
+        _verifiedPhoneNumber != normalizedPhone) {
+      return 'Please verify your phone number first';
+    }
 
     _setLoading(true);
     try {
@@ -256,7 +253,7 @@ class SignupController extends ChangeNotifier {
         email: emailController.text,
         password: passwordController.text,
         phoneNumber: normalizedPhone,
-        phoneCredential: verifiedCredential,
+        phoneCredential: _phoneCredential!,
         username: usernameController.text,
       );
 

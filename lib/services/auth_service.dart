@@ -116,7 +116,7 @@ class AuthService {
     required String email,
     required String password,
     required String phoneNumber,
-    PhoneAuthCredential? phoneCredential,
+    required PhoneAuthCredential phoneCredential,
     String? username,
   }) async {
     final credential = await _auth.createUserWithEmailAndPassword(
@@ -127,9 +127,7 @@ class AuthService {
     final user = credential.user;
     await user?.updateDisplayName(name.trim());
 
-    // Phone verification is optional: only link a verified phone credential
-    // when one was actually provided (SMS verification is not always available).
-    if (user != null && phoneCredential != null) {
+    if (user != null) {
       try {
         await user.linkWithCredential(phoneCredential);
       } on FirebaseAuthException {
