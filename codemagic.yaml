@@ -10,6 +10,35 @@ workflows:
         script: flutter config --no-enable-swift-package-manager
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Register Firebase Phone Auth URL scheme (fixes iOS crash)
+        script: |
+          # Firebase Phone Auth (reCAPTCHA fallback) needs the REVERSED_CLIENT_ID
+          # registered as a URL scheme in Info.plist, otherwise iOS HARD-CRASHES
+          # when the user taps "Verify Phone". We add it at build time from the
+          # GoogleService-Info.plist so we never commit the value.
+          set -e
+          INFO="ios/Runner/Info.plist"
+          GSP=""
+          for p in ios/Runner/GoogleService-Info.plist ios/GoogleService-Info.plist GoogleService-Info.plist; do
+            if [ -f "$p" ]; then GSP="$p"; break; fi
+          done
+          if [ -z "$GSP" ]; then
+            echo "WARNING: GoogleService-Info.plist not found; skipping URL scheme."
+            exit 0
+          fi
+          REVERSED=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$GSP" 2>/dev/null || true)
+          if [ -z "$REVERSED" ]; then
+            echo "WARNING: REVERSED_CLIENT_ID not in $GSP; skipping URL scheme."
+            exit 0
+          fi
+          # (Re)create a clean CFBundleURLTypes entry with the reversed client id.
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$INFO" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$INFO"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleTypeRole string Editor" "$INFO"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$INFO"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $REVERSED" "$INFO"
+          echo "Registered URL scheme: $REVERSED"
       - name: Build iOS archive (no code signing)
         script: flutter build ipa --release --no-codesign
       - name: Package unsigned IPA
